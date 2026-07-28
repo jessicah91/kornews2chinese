@@ -2,18 +2,21 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
+from typing import Any
 
 from src.ai import translate_article
 from src.config import Settings
 from src.db import existing_urls, get_admin_client, save_article
 from src.emailer import send_digest
 from src.news import (
+    NewsCandidate,
     choose_candidate,
     extract_article_text,
     published_iso,
     publisher_name,
     search_naver_news,
     today_iso,
+    topic_from_query,
 )
 
 
@@ -25,30 +28,40 @@ logging.basicConfig(
 LOGGER = logging.getLogger(__name__)
 
 
-TARGET_PUBLISHERS = (
-    "SBS",
-    "MBC",
-    "KBS",
-    "조선일보",
-    "중앙일보",
-    "동아일보",
-    "매일경제",
+TARGET_TOPICS = (
+    "국제",
+    "정치",
+    "경제",
+    "사회",
+    "IT·과학",
+    "문화·생활",
+    "연예",
+    "스포츠",
 )
 
 
-def collect_candidates_by_publisher(
+def collect_candidates_by_topic(
     settings: Settings,
     seen_urls: set[str],
-) -> dict[str, list]:
+) -> dict[str, list[NewsCandidate]]:
     """
-    모든 검색어의 네이버 뉴스 결과를 모아서
-    허용 언론사별 후보 목록으로 분류한다.
+    설정된 검색어별로 네이버 뉴스 후보를 수집한 뒤,
+    검색어에 대응하는 주제별 후보 목록으로 분류한다.
+
+    같은 URL은 한 번만 포함하며,
+    이미 DB에 저장된 URL도 제외한다.
     """
-    candidates_by_publisher: dict[str, list] = defaultdict(list)
+    candidates_by_topic: dict[str, list[NewsCandidate]] = defaultdict(list)
     local_seen: set[str] = set()
 
     for query in settings.news_queries:
-        LOGGER.info("Searching news query: %s", query)
+        topic = topic_from_query(query)
+
+        LOGGER.info(
+            "Searching news query: %s (topic=%s)",
+            query,
+            topic,
+        )
 
         try:
             candidates = search_naver_news(
@@ -58,8 +71,13 @@ def collect_candidates_by_publisher(
                 display=100,
             )
         except Exception:
-            LOGGER.exception("News search failed for query: %s", query)
+            LOGGER.exception(
+                "News search failed for query: %s",
+                query,
+            )
             continue
+
+        added_count = 0
 
         for candidate in candidates:
             url = candidate.original_link or candidate.link
@@ -72,29 +90,40 @@ def collect_candidates_by_publisher(
 
             publisher = publisher_name(url)
 
-            if publisher not in TARGET_PUBLISHERS:
+            if not publisher:
                 continue
 
-            candidates_by_publisher[publisher].append(candidate)
+            candidates_by_topic[topic].append(candidate)
             local_seen.add(url)
+            added_count += 1
 
-    return candidates_by_publisher
+        LOGGER.info(
+            "Collected %d allowed candidates for topic: %s",
+            added_count,
+            topic,
+        )
+
+    return candidates_by_topic
 
 
-def collect_one_article_for_publisher(
-    publisher: str,
-    candidates: list,
+def collect_articles_for_topic(
+    topic: str,
+    candidates: list[NewsCandidate],
+    limit: int,
     settings: Settings,
-    db,
+    db: Any,
     seen_urls: set[str],
-):
+) -> list[dict[str, Any]]:
     """
-    특정 언론사 후보 중에서 가장 적절한 기사 1개를 저장한다.
-    본문 추출에 실패하면 다음 후보를 시도한다.
+    특정 주제 후보 중 학습에 적합한 기사를 최대 limit개 저장한다.
+
+    후보 선택 후 본문 추출, 번역, DB 저장 중 하나라도 실패하면
+    같은 주제의 다음 후보를 계속 시도한다.
     """
+    saved_rows: list[dict[str, Any]] = []
     remaining_candidates = list(candidates)
 
-    while remaining_candidates:
+    while remaining_candidates and len(saved_rows) < limit:
         candidate = choose_candidate(
             remaining_candidates,
             seen_urls,
@@ -102,10 +131,10 @@ def collect_one_article_for_publisher(
 
         if not candidate:
             LOGGER.info(
-                "No suitable candidate found for publisher: %s",
-                publisher,
+                "No suitable candidate found for topic: %s",
+                topic,
             )
-            return None
+            break
 
         remaining_candidates.remove(candidate)
 
@@ -114,10 +143,14 @@ def collect_one_article_for_publisher(
         if not url:
             continue
 
+        # 같은 실행 안에서 다시 선택되지 않도록 먼저 등록한다.
         seen_urls.add(url)
 
+        publisher = publisher_name(url) or "언론사 미상"
+
         LOGGER.info(
-            "Trying article [%s]: %s",
+            "Trying article [topic=%s, publisher=%s]: %s",
+            topic,
             publisher,
             candidate.title,
         )
@@ -129,7 +162,9 @@ def collect_one_article_for_publisher(
 
         if len(body) < 500:
             LOGGER.warning(
-                "Skipping short/unavailable article [%s]: %s",
+                "Skipping short/unavailable article "
+                "[topic=%s, publisher=%s]: %s",
+                topic,
                 publisher,
                 url,
             )
@@ -145,7 +180,9 @@ def collect_one_article_for_publisher(
             )
         except Exception:
             LOGGER.exception(
-                "Translation failed [%s]: %s",
+                "Translation failed "
+                "[topic=%s, publisher=%s]: %s",
+                topic,
                 publisher,
                 url,
             )
@@ -159,7 +196,7 @@ def collect_one_article_for_publisher(
                     "naver_url": candidate.link,
                     "publisher_name": publisher,
                     "publisher_title": candidate.title,
-                    "category": candidate.query,
+                    "category": topic,
                     "author_name": None,
                     "published_at": published_iso(
                         candidate.published_at
@@ -178,26 +215,31 @@ def collect_one_article_for_publisher(
             )
         except Exception:
             LOGGER.exception(
-                "Database save failed [%s]: %s",
+                "Database save failed "
+                "[topic=%s, publisher=%s]: %s",
+                topic,
                 publisher,
                 url,
             )
             continue
 
         LOGGER.info(
-            "Saved article [%s]: %s",
+            "Saved article "
+            "[topic=%s, publisher=%s]: %s",
+            topic,
             publisher,
             candidate.title,
         )
 
-        return row
+        saved_rows.append(row)
 
-    LOGGER.info(
-        "All candidates failed for publisher: %s",
-        publisher,
-    )
+    if not saved_rows:
+        LOGGER.info(
+            "All candidates failed for topic: %s",
+            topic,
+        )
 
-    return None
+    return saved_rows
 
 
 def main() -> None:
@@ -209,42 +251,42 @@ def main() -> None:
     )
 
     seen_urls = set(existing_urls(db))
-    saved = []
+    saved: list[dict[str, Any]] = []
 
-    candidates_by_publisher = collect_candidates_by_publisher(
+    candidates_by_topic = collect_candidates_by_topic(
         settings,
         seen_urls,
     )
 
-    for publisher in TARGET_PUBLISHERS:
-        candidates = candidates_by_publisher.get(
-            publisher,
+    for topic in TARGET_TOPICS:
+        candidates = candidates_by_topic.get(
+            topic,
             [],
         )
 
         LOGGER.info(
-            "Publisher %s has %d candidates.",
-            publisher,
+            "Topic %s has %d candidates.",
+            topic,
             len(candidates),
         )
 
         if not candidates:
             LOGGER.warning(
-                "No search results found for publisher: %s",
-                publisher,
+                "No search results found for topic: %s",
+                topic,
             )
             continue
 
-        row = collect_one_article_for_publisher(
-            publisher,
-            candidates,
-            settings,
-            db,
-            seen_urls,
+        topic_rows = collect_articles_for_topic(
+            topic=topic,
+            candidates=candidates,
+            limit=settings.articles_per_query,
+            settings=settings,
+            db=db,
+            seen_urls=seen_urls,
         )
 
-        if row:
-            saved.append(row)
+        saved.extend(topic_rows)
 
     if (
         settings.resend_api_key
@@ -261,12 +303,14 @@ def main() -> None:
                 saved,
             )
         except Exception:
-            LOGGER.exception("Digest email failed.")
+            LOGGER.exception(
+                "Digest email failed."
+            )
 
     LOGGER.info(
-        "Done. Saved %d of %d target publishers.",
+        "Done. Saved %d articles across %d target topics.",
         len(saved),
-        len(TARGET_PUBLISHERS),
+        len(TARGET_TOPICS),
     )
 
 
