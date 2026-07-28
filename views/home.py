@@ -5,6 +5,7 @@ from typing import Any
 import streamlit as st
 
 from components.article_card import open_article, render_article_card
+from components.daily_expression import render_daily_expression
 from utils.articles import TOPICS, recommendation_score, topic
 
 
@@ -16,7 +17,7 @@ TOPIC_ICONS = {
 
 def render_home(articles: list[dict[str, Any]]) -> None:
     st.markdown(
-        """
+        '''
         <section class="hero">
             <div class="eyebrow">오늘의 중국어 뉴스 학습</div>
             <div class="hero-title">매일 한국 뉴스를<br>중국어로 공부하세요</div>
@@ -25,11 +26,12 @@ def render_home(articles: list[dict[str, Any]]) -> None:
                 한 흐름으로 학습해보세요.
             </div>
         </section>
-        """,
+        ''',
         unsafe_allow_html=True,
     )
 
     if not articles:
+        render_daily_expression([])
         st.markdown('<div class="empty">아직 저장된 기사가 없습니다.</div>', unsafe_allow_html=True)
         return
 
@@ -37,6 +39,8 @@ def render_home(articles: list[dict[str, Any]]) -> None:
     if st.button("오늘의 추천 기사 시작하기", type="primary", use_container_width=True):
         open_article(recommended)
         st.rerun()
+
+    render_daily_expression(articles)
 
     st.markdown('<div class="section-heading">오늘의 추천</div>', unsafe_allow_html=True)
     render_article_card(recommended, "recommended")

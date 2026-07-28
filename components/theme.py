@@ -31,13 +31,13 @@ def apply_theme() -> None:
 
         .block-container {
             max-width: 1180px;
-            padding-top: 4.8rem;
+            padding-top: 1.2rem;
             padding-bottom: 5rem;
         }
 
         header[data-testid="stHeader"] {
-            background: rgba(247, 251, 248, 0.85);
-            backdrop-filter: blur(20px);
+            background: rgba(247, 251, 248, 0.82);
+            backdrop-filter: blur(18px);
         }
 
         #MainMenu, footer {
@@ -70,14 +70,14 @@ def apply_theme() -> None:
         }
 
         .hero {
-            padding: 3.6rem 2rem 3.9rem;
+            padding: 4.4rem 2rem 3.9rem;
             text-align: center;
             border: 1px solid var(--green-border);
             border-radius: 30px;
             background:
                 radial-gradient(circle at 50% -10%, #DDF3E6 0%, transparent 44%),
                 linear-gradient(180deg, #FFFFFF 0%, #F5FBF7 100%);
-            margin: 2rem 0 2.5rem;
+            margin: 1rem 0 2.5rem;
         }
 
         .eyebrow {
@@ -240,6 +240,101 @@ def apply_theme() -> None:
             color: var(--green) !important;
         }
 
+
+        .expression-card {
+            position: relative;
+            overflow: hidden;
+            padding: 2rem 2.1rem;
+            border: 1px solid var(--green-border);
+            border-radius: 26px;
+            background:
+                radial-gradient(circle at 92% 12%, rgba(196, 232, 210, .52), transparent 34%),
+                linear-gradient(145deg, #FFFFFF 0%, #F0F9F4 100%);
+            box-shadow: 0 12px 38px rgba(35, 77, 56, .055);
+        }
+
+        .expression-topline {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1.1rem;
+        }
+
+        .expression-label {
+            display: inline-flex;
+            align-items: center;
+            min-height: 1.9rem;
+            padding: .3rem .72rem;
+            border-radius: 999px;
+            background: rgba(46, 125, 90, .1);
+            color: var(--green);
+            font-size: .8rem;
+            font-weight: 680;
+        }
+
+        .expression-date {
+            color: var(--muted);
+            font-size: .82rem;
+        }
+
+        .expression-main {
+            font-size: clamp(2rem, 4.3vw, 3.45rem);
+            line-height: 1.15;
+            font-weight: 570;
+            letter-spacing: -.045em;
+            color: var(--text);
+        }
+
+        .expression-pinyin {
+            margin-top: .58rem;
+            color: var(--green);
+            font-size: 1.05rem;
+            line-height: 1.6;
+        }
+
+        .expression-meaning {
+            margin-top: .82rem;
+            color: var(--text);
+            font-size: 1.08rem;
+            font-weight: 590;
+            line-height: 1.65;
+        }
+
+        .expression-example {
+            margin-top: 1.45rem;
+            padding: 1.15rem 1.2rem;
+            border: 1px solid rgba(46, 125, 90, .12);
+            border-radius: 17px;
+            background: rgba(255, 255, 255, .76);
+        }
+
+        .expression-example-title {
+            margin-bottom: .42rem;
+            color: var(--muted);
+            font-size: .78rem;
+            font-weight: 650;
+        }
+
+        .expression-example-zh {
+            font-size: 1.07rem;
+            font-weight: 600;
+            line-height: 1.7;
+        }
+
+        .expression-example-ko {
+            margin-top: .25rem;
+            color: var(--muted);
+            line-height: 1.65;
+        }
+
+        .expression-note {
+            margin-top: 1.1rem;
+            color: var(--muted);
+            font-size: .91rem;
+            line-height: 1.7;
+        }
+
         @media (max-width: 760px) {
             .block-container {
                 padding: .65rem 1rem 4rem;
@@ -256,6 +351,15 @@ def apply_theme() -> None:
 
             .article-card {
                 padding: 1.15rem;
+            }
+
+            .expression-card {
+                padding: 1.45rem 1.25rem;
+                border-radius: 22px;
+            }
+
+            .expression-date {
+                display: none;
             }
 
             div[data-testid="column"] {
