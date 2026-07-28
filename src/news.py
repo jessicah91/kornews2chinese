@@ -14,10 +14,11 @@ import trafilatura
 
 LOGGER = logging.getLogger(__name__)
 
-NAVER_NEWS_URL = "https://openapi.naver.com/v1/search/news.json"
+NAVER_NEWS_URL = (
+    "https://openapi.naver.com/v1/search/news.json"
+)
 
 
-# 허용할 언론사
 ALLOWED_PUBLISHERS = {
     "news.sbs.co.kr": "SBS",
     "imnews.imbc.com": "MBC",
@@ -34,7 +35,37 @@ ALLOWED_PUBLISHERS = {
 }
 
 
-# 제목에 아래 표현이 있으면 수집하지 않음
+QUERY_TOPIC_MAP = {
+    "국제": "국제",
+    "세계": "국제",
+    "해외": "국제",
+    "정치": "정치",
+    "정부": "정치",
+    "국회": "정치",
+    "경제": "경제",
+    "금융": "경제",
+    "기업": "경제",
+    "사회": "사회",
+    "교육": "사회",
+    "사건": "사회",
+    "IT": "IT·과학",
+    "과학": "IT·과학",
+    "기술": "IT·과학",
+    "인공지능": "IT·과학",
+    "문화": "문화·생활",
+    "생활": "문화·생활",
+    "여행": "문화·생활",
+    "건강": "문화·생활",
+    "연예": "연예",
+    "드라마": "연예",
+    "영화": "연예",
+    "음악": "연예",
+    "스포츠": "스포츠",
+    "축구": "스포츠",
+    "야구": "스포츠",
+}
+
+
 BLOCKED_TITLE_WORDS = (
     "[인사]",
     "[부고]",
@@ -69,7 +100,6 @@ BLOCKED_TITLE_WORDS = (
 )
 
 
-# 중국어 학습용으로 지나치게 전문적인 기사에 자주 등장하는 표현
 VERY_DIFFICULT_TERMS = (
     "파생상품",
     "신용부도스와프",
@@ -97,7 +127,6 @@ VERY_DIFFICULT_TERMS = (
 )
 
 
-# 일반 독자가 읽기 좋은 주요 뉴스에 자주 등장하는 표현
 IMPORTANT_NEWS_TERMS = (
     "정부",
     "대통령",
@@ -127,10 +156,48 @@ IMPORTANT_NEWS_TERMS = (
     "SK",
     "현대",
     "LG",
+    "영화",
+    "드라마",
+    "배우",
+    "가수",
+    "콘서트",
+    "예능",
+    "넷플릭스",
+    "디즈니",
+    "음악",
+    "공연",
+    "축구",
+    "야구",
+    "농구",
+    "배구",
+    "골프",
+    "대표팀",
+    "리그",
+    "월드컵",
+    "올림픽",
+    "KBO",
+    "메이저리그",
+    "여행",
+    "음식",
+    "건강",
+    "운동",
+    "전시",
+    "축제",
 )
 
 
-# 기사 본문에서 제거할 꼬리 문구
+EASY_TOPIC_BONUS = {
+    "국제": 1,
+    "정치": 0,
+    "경제": 0,
+    "사회": 1,
+    "IT·과학": 1,
+    "문화·생활": 4,
+    "연예": 5,
+    "스포츠": 5,
+}
+
+
 TRAILING_PATTERNS = (
     r"무단\s*전재.*$",
     r"무단전재.*$",
@@ -158,13 +225,30 @@ class NewsCandidate:
     original_link: str
     published_at: str
 
+    @property
+    def topic(self) -> str:
+        return topic_from_query(self.query)
+
 
 def _clean(value: str | None) -> str:
-    """네이버 검색 결과의 HTML 태그와 엔티티를 정리한다."""
     value = html.unescape(value or "")
     value = re.sub(r"<[^>]+>", "", value)
     value = re.sub(r"\s+", " ", value)
     return value.strip()
+
+
+def topic_from_query(query: str) -> str:
+    normalized = re.sub(
+        r"\s+",
+        " ",
+        query or "",
+    ).strip()
+
+    for keyword, topic in QUERY_TOPIC_MAP.items():
+        if keyword.lower() in normalized.lower():
+            return topic
+
+    return "사회"
 
 
 def search_naver_news(
@@ -173,7 +257,6 @@ def search_naver_news(
     query: str,
     display: int = 100,
 ) -> list[NewsCandidate]:
-    """네이버 뉴스 검색 API에서 최신 기사 후보를 가져온다."""
     response = requests.get(
         NAVER_NEWS_URL,
         headers={
@@ -195,12 +278,19 @@ def search_naver_news(
         NewsCandidate(
             query=query,
             title=_clean(item.get("title")),
-            description=_clean(item.get("description")),
+            description=_clean(
+                item.get("description")
+            ),
             link=item.get("link", "") or "",
-            original_link=item.get("originallink", "")
-            or item.get("link", "")
-            or "",
-            published_at=item.get("pubDate", "") or "",
+            original_link=(
+                item.get("originallink", "")
+                or item.get("link", "")
+                or ""
+            ),
+            published_at=item.get(
+                "pubDate",
+                "",
+            ) or "",
         )
         for item in items
     ]
@@ -208,17 +298,24 @@ def search_naver_news(
 
 def _hostname(url: str) -> str:
     try:
-        return urlparse(url).netloc.lower().split(":")[0]
+        return (
+            urlparse(url)
+            .netloc
+            .lower()
+            .split(":")[0]
+        )
     except Exception:
         return ""
 
 
 def publisher_name(url: str) -> str | None:
-    """허용 언론사 URL이면 언론사 이름을 반환한다."""
     hostname = _hostname(url)
 
     for domain, name in ALLOWED_PUBLISHERS.items():
-        if hostname == domain or hostname.endswith("." + domain):
+        if (
+            hostname == domain
+            or hostname.endswith("." + domain)
+        ):
             return name
 
     return None
@@ -229,7 +326,11 @@ def _is_allowed_publisher(url: str) -> bool:
 
 
 def _is_blocked_title(title: str) -> bool:
-    normalized = re.sub(r"\s+", " ", title).strip().lower()
+    normalized = re.sub(
+        r"\s+",
+        " ",
+        title,
+    ).strip().lower()
 
     return any(
         blocked.lower() in normalized
@@ -237,47 +338,178 @@ def _is_blocked_title(title: str) -> bool:
     )
 
 
-def _difficulty_penalty(title: str, description: str) -> int:
-    """제목과 요약만으로 지나치게 전문적인 기사에 감점을 준다."""
+def _difficulty_penalty(
+    title: str,
+    description: str,
+) -> int:
     combined = f"{title} {description}"
-    hits = sum(1 for term in VERY_DIFFICULT_TERMS if term in combined)
+    hits = sum(
+        1
+        for term in VERY_DIFFICULT_TERMS
+        if term in combined
+    )
 
     penalty = hits * 4
 
-    # 제목이 지나치게 길거나 기호·약어가 많은 기사도 감점
     if len(title) > 75:
         penalty += 2
 
-    uppercase_tokens = re.findall(r"\b[A-Z]{3,}\b", title)
+    uppercase_tokens = re.findall(
+        r"\b[A-Z]{3,}\b",
+        title,
+    )
+
     if len(uppercase_tokens) >= 3:
         penalty += 2
 
-    special_count = len(re.findall(r"[%·:/()〈〉《》\[\]]", title))
+    special_count = len(
+        re.findall(
+            r"[%·:/()〈〉《》\[\]]",
+            title,
+        )
+    )
+
     if special_count >= 6:
         penalty += 2
 
     return penalty
 
 
-def _importance_score(candidate: NewsCandidate) -> int:
-    """중국어 학습에 적절한 일반 주요 뉴스가 먼저 선택되도록 점수를 계산한다."""
-    combined = f"{candidate.title} {candidate.description}"
+def _topic_relevance_score(
+    candidate: NewsCandidate,
+) -> int:
+    combined = (
+        f"{candidate.title} "
+        f"{candidate.description}"
+    ).lower()
+
+    topic_keywords = {
+        "국제": (
+            "미국",
+            "중국",
+            "일본",
+            "유럽",
+            "해외",
+            "외교",
+            "정상회담",
+            "관세",
+        ),
+        "정치": (
+            "대통령",
+            "국회",
+            "정부",
+            "여당",
+            "야당",
+            "선거",
+            "의원",
+            "장관",
+        ),
+        "경제": (
+            "경제",
+            "금리",
+            "환율",
+            "증시",
+            "기업",
+            "부동산",
+            "수출",
+            "금융",
+        ),
+        "사회": (
+            "사회",
+            "교육",
+            "학교",
+            "경찰",
+            "법원",
+            "병원",
+            "노동",
+            "환경",
+        ),
+        "IT·과학": (
+            "ai",
+            "인공지능",
+            "it",
+            "과학",
+            "기술",
+            "로봇",
+            "우주",
+            "연구",
+        ),
+        "문화·생활": (
+            "문화",
+            "생활",
+            "여행",
+            "건강",
+            "음식",
+            "전시",
+            "축제",
+            "공연",
+        ),
+        "연예": (
+            "연예",
+            "배우",
+            "가수",
+            "드라마",
+            "영화",
+            "예능",
+            "콘서트",
+            "앨범",
+        ),
+        "스포츠": (
+            "스포츠",
+            "축구",
+            "야구",
+            "농구",
+            "배구",
+            "선수",
+            "경기",
+            "대표팀",
+        ),
+    }
+
+    return sum(
+        2
+        for keyword in topic_keywords.get(
+            candidate.topic,
+            (),
+        )
+        if keyword.lower() in combined
+    )
+
+
+def _importance_score(
+    candidate: NewsCandidate,
+) -> int:
+    combined = (
+        f"{candidate.title} "
+        f"{candidate.description}"
+    )
 
     score = 10
 
     for term in IMPORTANT_NEWS_TERMS:
-        if term in combined:
+        if term.lower() in combined.lower():
             score += 2
 
-    score -= _difficulty_penalty(candidate.title, candidate.description)
+    score += EASY_TOPIC_BONUS.get(
+        candidate.topic,
+        0,
+    )
 
-    # 내용이 너무 짧은 검색 결과는 감점
+    score += _topic_relevance_score(candidate)
+
+    score -= _difficulty_penalty(
+        candidate.title,
+        candidate.description,
+    )
+
     if len(candidate.description) < 35:
         score -= 2
 
-    # 제목이 지나치게 짧으면 단순 알림 기사일 가능성이 있음
     if len(candidate.title) < 12:
         score -= 3
+
+    if len(candidate.title) > 90:
+        score -= 2
 
     return score
 
@@ -286,14 +518,13 @@ def choose_candidate(
     candidates: list[NewsCandidate],
     seen_urls: set[str],
 ) -> NewsCandidate | None:
-    """
-    지정 언론사·일반 기사만 남긴 뒤,
-    주요 뉴스성과 학습 난이도를 고려해 가장 적절한 기사를 고른다.
-    """
     valid_candidates: list[NewsCandidate] = []
 
     for candidate in candidates:
-        canonical_url = candidate.original_link or candidate.link
+        canonical_url = (
+            candidate.original_link
+            or candidate.link
+        )
 
         if not canonical_url:
             continue
@@ -301,10 +532,14 @@ def choose_candidate(
         if canonical_url in seen_urls:
             continue
 
-        if not _is_allowed_publisher(canonical_url):
+        if not _is_allowed_publisher(
+            canonical_url
+        ):
             continue
 
-        if _is_blocked_title(candidate.title):
+        if _is_blocked_title(
+            candidate.title
+        ):
             LOGGER.info(
                 "Skipping blocked article title: %s",
                 candidate.title,
@@ -313,10 +548,10 @@ def choose_candidate(
 
         score = _importance_score(candidate)
 
-        # 너무 전문적이거나 학습 가치가 낮은 후보는 제외
         if score < 5:
             LOGGER.info(
-                "Skipping low-value/difficult article (%s): %s",
+                "Skipping low-value/difficult article "
+                "(%s): %s",
                 score,
                 candidate.title,
             )
@@ -333,10 +568,16 @@ def choose_candidate(
     )
 
     selected = valid_candidates[0]
+    selected_url = (
+        selected.original_link
+        or selected.link
+    )
 
     LOGGER.info(
-        "Selected article [%s, score=%s]: %s",
-        publisher_name(selected.original_link or selected.link),
+        "Selected article "
+        "[topic=%s, publisher=%s, score=%s]: %s",
+        selected.topic,
+        publisher_name(selected_url),
         _importance_score(selected),
         selected.title,
     )
@@ -344,11 +585,11 @@ def choose_candidate(
     return selected
 
 
-def _remove_trailing_noise(text: str) -> str:
-    """기자 이메일, 저작권, SNS 공유 등 기사 외 문구를 제거한다."""
+def _remove_trailing_noise(
+    text: str,
+) -> str:
     cleaned = text
 
-    # 기자 이메일 제거
     cleaned = re.sub(
         r"\b[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}\b",
         "",
@@ -363,7 +604,6 @@ def _remove_trailing_noise(text: str) -> str:
             flags=re.IGNORECASE | re.DOTALL,
         )
 
-    # 기사 중간이나 끝에 붙은 매체 저작권 문구 제거
     cleaned = re.sub(
         r"ⓒ\s*[^\n]{0,100}",
         "",
@@ -376,22 +616,37 @@ def _remove_trailing_noise(text: str) -> str:
         cleaned,
     )
 
-    cleaned = re.sub(r"[ \t]+", " ", cleaned)
-    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    cleaned = re.sub(
+        r"[ \t]+",
+        " ",
+        cleaned,
+    )
+    cleaned = re.sub(
+        r"\n{3,}",
+        "\n\n",
+        cleaned,
+    )
 
     return cleaned.strip()
 
 
-def extract_article_text(url: str, max_chars: int) -> str:
-    """기사 URL에서 본문을 추출하고 불필요한 문구를 정리한다."""
+def extract_article_text(
+    url: str,
+    max_chars: int,
+) -> str:
     if not url:
         return ""
 
     try:
-        downloaded = trafilatura.fetch_url(url)
+        downloaded = trafilatura.fetch_url(
+            url
+        )
 
         if not downloaded:
-            LOGGER.warning("Could not download article: %s", url)
+            LOGGER.warning(
+                "Could not download article: %s",
+                url,
+            )
             return ""
 
         extracted = trafilatura.extract(
@@ -406,16 +661,24 @@ def extract_article_text(url: str, max_chars: int) -> str:
         )
 
         if not extracted:
-            LOGGER.warning("Could not extract article body: %s", url)
+            LOGGER.warning(
+                "Could not extract article body: %s",
+                url,
+            )
             return ""
 
-        cleaned = _remove_trailing_noise(extracted)
+        cleaned = _remove_trailing_noise(
+            extracted
+        )
 
-        # 너무 짧은 줄과 UI성 문구를 제거
         lines: list[str] = []
 
         for raw_line in cleaned.splitlines():
-            line = re.sub(r"\s+", " ", raw_line).strip()
+            line = re.sub(
+                r"\s+",
+                " ",
+                raw_line,
+            ).strip()
 
             if not line:
                 continue
@@ -432,31 +695,51 @@ def extract_article_text(url: str, max_chars: int) -> str:
             }:
                 continue
 
-            if re.fullmatch(r"댓글\s*\d*", line):
+            if re.fullmatch(
+                r"댓글\s*\d*",
+                line,
+            ):
                 continue
 
             lines.append(line)
 
         final_text = "\n\n".join(lines)
-        final_text = _remove_trailing_noise(final_text)
+        final_text = _remove_trailing_noise(
+            final_text
+        )
 
-        return final_text[:max_chars].strip()
+        return final_text[
+            :max_chars
+        ].strip()
 
     except Exception:
-        LOGGER.exception("Article extraction failed: %s", url)
+        LOGGER.exception(
+            "Article extraction failed: %s",
+            url,
+        )
         return ""
 
 
-def published_iso(value: str) -> str | None:
-    """네이버 API 날짜를 ISO 형식으로 변환한다."""
+def published_iso(
+    value: str,
+) -> str | None:
     if not value:
         return None
 
     try:
-        parsed = parsedate_to_datetime(value)
+        parsed = parsedate_to_datetime(
+            value
+        )
         return parsed.isoformat()
-    except (TypeError, ValueError, OverflowError):
-        LOGGER.warning("Could not parse published date: %s", value)
+    except (
+        TypeError,
+        ValueError,
+        OverflowError,
+    ):
+        LOGGER.warning(
+            "Could not parse published date: %s",
+            value,
+        )
         return None
 
 
