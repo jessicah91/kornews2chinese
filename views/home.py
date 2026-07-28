@@ -35,6 +35,8 @@ TOPIC_ICONS = {
 
 def _render_expression_card(articles: list[dict[str, Any]]) -> dict[str, Any]:
     expression = get_daily_expression(articles)
+     st.json(expression)
+    st.stop()
 
     example_html = ""
     if expression.get("example"):
