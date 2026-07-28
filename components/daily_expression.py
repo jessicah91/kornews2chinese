@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import date
 from typing import Any
 
@@ -107,7 +108,9 @@ def _first_nonempty(item: dict[str, Any], *keys: str) -> str:
     for key in keys:
         value = item.get(key)
         if isinstance(value, str) and value.strip():
+            value = re.sub(r"<[^>]+>", "", value)
             return value.strip()
+
     return ""
 
 
