@@ -12,6 +12,7 @@ st.set_page_config(
     page_title="오늘의 중국어 뉴스",
     page_icon="📰",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
 
 
@@ -23,8 +24,21 @@ TOPIC_OPTIONS = [
     "사회",
     "IT·과학",
     "문화·생활",
+    "연예",
     "스포츠",
 ]
+
+TOPIC_ICONS = {
+    "전체": "✦",
+    "국제": "🌏",
+    "정치": "🏛️",
+    "경제": "📈",
+    "사회": "👥",
+    "IT·과학": "💻",
+    "문화·생활": "🎨",
+    "연예": "🎬",
+    "스포츠": "⚽",
+}
 
 TOPIC_KEYWORDS = {
     "국제": (
@@ -48,12 +62,16 @@ TOPIC_KEYWORDS = {
         "스마트폰", "플랫폼", "소프트웨어", "데이터", "인터넷", "게임",
     ),
     "문화·생활": (
-        "문화", "생활", "건강", "여행", "음식", "패션", "영화", "드라마",
-        "음악", "공연", "도서", "전시", "방송", "연예", "날씨",
+        "문화", "생활", "건강", "여행", "음식", "패션", "공연", "도서",
+        "전시", "축제", "날씨",
+    ),
+    "연예": (
+        "연예", "영화", "드라마", "배우", "가수", "아이돌", "예능",
+        "방송", "음악", "콘서트", "앨범", "넷플릭스",
     ),
     "스포츠": (
         "스포츠", "축구", "야구", "농구", "배구", "골프", "선수", "감독",
-        "경기", "리그", "대표팀", "올림픽", "월드컵",
+        "경기", "리그", "대표팀", "올림픽", "월드컵", "KBO",
     ),
 }
 
@@ -61,103 +79,488 @@ TOPIC_KEYWORDS = {
 st.markdown(
     """
     <style>
+    :root {
+        --surface: #ffffff;
+        --surface-soft: #f6f8fb;
+        --surface-blue: #eef4ff;
+        --text: #162033;
+        --muted: #6f7b8f;
+        --line: #e5eaf2;
+        --primary: #3157d5;
+        --primary-deep: #203ba5;
+        --primary-soft: #e8eeff;
+        --accent: #f36b4a;
+        --success: #16856b;
+        --shadow: 0 12px 32px rgba(40, 57, 100, 0.08);
+    }
+
+    html, body, [class*="css"] {
+        font-family:
+            Pretendard, "Apple SD Gothic Neo", "Noto Sans KR",
+            "Noto Sans CJK KR", sans-serif;
+    }
+
+    .stApp {
+        background:
+            radial-gradient(
+                circle at 10% 0%,
+                rgba(66, 105, 225, 0.08),
+                transparent 25rem
+            ),
+            #f7f9fc;
+        color: var(--text);
+    }
+
     .block-container {
-        max-width: 1180px;
-        padding-top: 2rem;
-        padding-bottom: 4rem;
+        max-width: 1280px;
+        padding-top: 1.5rem;
+        padding-bottom: 5rem;
     }
 
-    .main-title {
-        font-size: 2.2rem;
+    section[data-testid="stSidebar"] {
+        background: rgba(255, 255, 255, 0.96);
+        border-right: 1px solid var(--line);
+    }
+
+    section[data-testid="stSidebar"] .block-container {
+        padding-top: 1.5rem;
+    }
+
+    div[data-testid="stMetric"] {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 1rem 1.1rem;
+        box-shadow: 0 5px 18px rgba(40, 57, 100, 0.05);
+    }
+
+    div[data-testid="stMetricLabel"] {
+        color: var(--muted);
+    }
+
+    div[data-testid="stMetricValue"] {
+        color: var(--text);
+    }
+
+    div[data-testid="stTabs"] button {
+        border-radius: 999px;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    div[data-testid="stTabs"] button[aria-selected="true"] {
+        background: var(--primary-soft);
+        color: var(--primary-deep);
+    }
+
+    div[data-testid="stExpander"],
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border-radius: 18px;
+    }
+
+    .brand-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.35rem 0 1.25rem;
+    }
+
+    .brand-wrap {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .brand-mark {
+        width: 46px;
+        height: 46px;
+        border-radius: 15px;
+        display: grid;
+        place-items: center;
+        color: white;
+        font-size: 1.35rem;
+        background:
+            linear-gradient(145deg, var(--primary), var(--primary-deep));
+        box-shadow: 0 9px 22px rgba(49, 87, 213, 0.25);
+    }
+
+    .brand-title {
+        font-size: 1.22rem;
         font-weight: 850;
-        margin-bottom: 0.2rem;
+        letter-spacing: -0.03em;
     }
 
-    .sub-title {
-        color: #6b7280;
-        margin-bottom: 1.6rem;
+    .brand-caption {
+        color: var(--muted);
+        font-size: 0.83rem;
+        margin-top: 0.1rem;
     }
 
-    .hero-card {
-        padding: 1.6rem 1.7rem;
-        border: 1px solid #dbeafe;
-        border-radius: 20px;
-        background: linear-gradient(135deg, #eff6ff 0%, #ffffff 70%);
-        margin-bottom: 1.4rem;
+    .top-nav {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        flex-wrap: wrap;
     }
 
-    .article-card {
-        padding: 1.2rem 1.35rem;
-        border: 1px solid #e5e7eb;
-        border-radius: 16px;
-        margin-bottom: 1rem;
+    .nav-item {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.52rem 0.82rem;
+        border-radius: 999px;
+        color: #536078;
+        background: rgba(255, 255, 255, 0.7);
+        border: 1px solid var(--line);
+        font-size: 0.88rem;
+        font-weight: 650;
+    }
+
+    .nav-item.active {
+        color: white;
+        border-color: transparent;
+        background: var(--primary);
+    }
+
+    .hero-shell {
+        position: relative;
+        overflow: hidden;
+        border-radius: 28px;
+        padding: 2.2rem 2.25rem;
+        background:
+            linear-gradient(
+                135deg,
+                #213da8 0%,
+                #3157d5 52%,
+                #5578e8 100%
+            );
+        color: white;
+        box-shadow: 0 18px 44px rgba(35, 61, 160, 0.22);
+        margin-bottom: 1.35rem;
+    }
+
+    .hero-shell::after {
+        content: "";
+        position: absolute;
+        width: 320px;
+        height: 320px;
+        right: -105px;
+        top: -145px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.11);
+    }
+
+    .hero-eyebrow {
+        display: inline-flex;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        font-size: 0.82rem;
+        font-weight: 750;
+        margin-bottom: 0.85rem;
+    }
+
+    .hero-heading {
+        max-width: 720px;
+        font-size: clamp(2rem, 4vw, 3.35rem);
+        line-height: 1.12;
+        font-weight: 900;
+        letter-spacing: -0.055em;
+        margin-bottom: 0.8rem;
+    }
+
+    .hero-copy {
+        max-width: 650px;
+        font-size: 1rem;
+        line-height: 1.72;
+        color: rgba(255, 255, 255, 0.83);
+    }
+
+    .section-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        gap: 1rem;
+        margin: 2rem 0 0.9rem;
+    }
+
+    .section-title {
+        font-size: 1.35rem;
+        font-weight: 850;
+        letter-spacing: -0.035em;
+    }
+
+    .section-desc {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin-top: 0.2rem;
+    }
+
+    .recommend-card {
+        min-height: 100%;
+        padding: 1.65rem 1.7rem;
+        border: 1px solid #dce5ff;
+        border-radius: 24px;
+        background:
+            linear-gradient(140deg, #f2f6ff 0%, #ffffff 68%);
+        box-shadow: var(--shadow);
+    }
+
+    .dashboard-card {
+        min-height: 100%;
+        padding: 1.45rem;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+    }
+
+    .dashboard-label {
+        color: var(--muted);
+        font-size: 0.84rem;
+        margin-bottom: 0.3rem;
+    }
+
+    .dashboard-value {
+        font-size: 1.65rem;
+        line-height: 1;
+        font-weight: 850;
+        letter-spacing: -0.04em;
+        margin-bottom: 0.32rem;
+    }
+
+    .dashboard-copy {
+        color: var(--muted);
+        font-size: 0.85rem;
+        line-height: 1.55;
+    }
+
+    .topic-row {
+        display: flex;
+        gap: 0.55rem;
+        overflow-x: auto;
+        padding: 0.15rem 0 0.65rem;
+        scrollbar-width: none;
+    }
+
+    .topic-row::-webkit-scrollbar {
+        display: none;
+    }
+
+    .topic-chip {
+        flex: 0 0 auto;
+        display: inline-flex;
+        gap: 0.35rem;
+        align-items: center;
+        padding: 0.58rem 0.82rem;
+        border: 1px solid var(--line);
+        border-radius: 999px;
         background: white;
-    }
-
-    .meta-badge {
-        display: inline-block;
-        padding: 0.27rem 0.65rem;
-        border-radius: 999px;
-        background: #f3f4f6;
-        margin-right: 0.35rem;
-        margin-bottom: 0.4rem;
-        font-size: 0.84rem;
-    }
-
-    .topic-badge {
-        display: inline-block;
-        padding: 0.27rem 0.65rem;
-        border-radius: 999px;
-        background: #dbeafe;
-        color: #1d4ed8;
-        margin-right: 0.35rem;
-        margin-bottom: 0.4rem;
-        font-size: 0.84rem;
+        color: #4b5870;
+        font-size: 0.87rem;
         font-weight: 700;
     }
 
+    .article-list-card {
+        padding: 1.25rem 1.3rem;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        margin-bottom: 0.85rem;
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow: 0 5px 18px rgba(40, 57, 100, 0.04);
+        transition:
+            transform 0.18s ease,
+            box-shadow 0.18s ease,
+            border-color 0.18s ease;
+    }
+
+    .article-list-card:hover {
+        transform: translateY(-2px);
+        border-color: #cfd9f5;
+        box-shadow: 0 12px 28px rgba(40, 57, 100, 0.09);
+    }
+
+    .article-title {
+        font-size: 1.08rem;
+        line-height: 1.48;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        color: var(--text);
+        margin: 0.45rem 0 0.35rem;
+    }
+
+    .article-chinese-preview {
+        color: #435477;
+        line-height: 1.65;
+        font-size: 0.92rem;
+    }
+
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.26rem 0.58rem;
+        border-radius: 999px;
+        background: #f1f4f8;
+        color: #59677d;
+        margin-right: 0.28rem;
+        margin-bottom: 0.25rem;
+        font-size: 0.76rem;
+        font-weight: 700;
+    }
+
+    .badge-topic {
+        background: var(--primary-soft);
+        color: var(--primary-deep);
+    }
+
+    .badge-accent {
+        background: #fff0eb;
+        color: #bd4d32;
+    }
+
+    .reading-header {
+        padding: 1.8rem 1.9rem;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: white;
+        box-shadow: var(--shadow);
+        margin-top: 1rem;
+    }
+
     .chinese-sentence {
-        font-size: 1.2rem;
+        font-size: 1.18rem;
         line-height: 1.9;
-        font-weight: 650;
+        font-weight: 680;
         margin-top: 0.25rem;
     }
 
     .pinyin-sentence {
-        color: #2563eb;
-        line-height: 1.7;
-        margin-top: 0.2rem;
+        color: var(--primary);
+        line-height: 1.75;
+        margin-top: 0.15rem;
     }
 
     .korean-sentence {
-        color: #4b5563;
-        line-height: 1.7;
-        margin-top: 0.25rem;
+        color: #566176;
+        line-height: 1.75;
+        margin-top: 0.22rem;
     }
 
     .sentence-box {
-        padding: 1rem 1.1rem;
-        border-radius: 14px;
-        background: #f9fafb;
-        margin-bottom: 0.85rem;
-    }
-
-    .vocab-word {
-        font-size: 1.15rem;
-        font-weight: 750;
-    }
-
-    .small-muted {
-        color: #6b7280;
-        font-size: 0.9rem;
+        padding: 1.1rem 1.15rem;
+        border: 1px solid #edf0f5;
+        border-radius: 17px;
+        background: #fafbfe;
+        margin-bottom: 0.82rem;
     }
 
     .summary-box {
-        padding: 1.2rem 1.3rem;
-        border-radius: 16px;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        margin: 0.75rem 0;
+        padding: 1.15rem 1.2rem;
+        border: 1px solid var(--line);
+        border-radius: 17px;
+        background: white;
+        margin-bottom: 0.7rem;
+    }
+
+    .vocab-word {
+        font-size: 1.18rem;
+        font-weight: 850;
+        letter-spacing: -0.02em;
+    }
+
+    .small-muted {
+        color: var(--muted);
+        font-size: 0.87rem;
+    }
+
+    .footer-note {
+        margin-top: 2.8rem;
+        padding-top: 1.2rem;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.82rem;
+        line-height: 1.65;
+    }
+
+    @media (max-width: 900px) {
+        .block-container {
+            padding-left: 1rem;
+            padding-right: 1rem;
+            padding-top: 0.85rem;
+        }
+
+        .brand-bar {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .top-nav {
+            width: 100%;
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            padding-bottom: 0.25rem;
+        }
+
+        .nav-item {
+            flex: 0 0 auto;
+        }
+
+        .hero-shell {
+            border-radius: 22px;
+            padding: 1.7rem 1.35rem;
+        }
+
+        .hero-heading {
+            font-size: 2rem;
+        }
+
+        .reading-header {
+            padding: 1.35rem 1.15rem;
+        }
+
+        .section-heading {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .brand-caption {
+            display: none;
+        }
+
+        .brand-mark {
+            width: 41px;
+            height: 41px;
+        }
+
+        .hero-shell {
+            padding: 1.5rem 1.1rem;
+        }
+
+        .hero-heading {
+            font-size: 1.72rem;
+        }
+
+        .hero-copy {
+            font-size: 0.92rem;
+        }
+
+        .article-list-card,
+        .recommend-card,
+        .dashboard-card {
+            border-radius: 18px;
+        }
+
+        .chinese-sentence {
+            font-size: 1.08rem;
+        }
+
+        div[data-testid="stHorizontalBlock"] {
+            gap: 0.7rem;
+        }
     }
     </style>
     """,
@@ -309,7 +712,13 @@ def hsk_label(article: dict[str, Any]) -> str:
     if isinstance(raw, (int, float)):
         return f"HSK{max(1, min(round(raw), 6))}"
 
-    mapping = {1: "HSK3", 2: "HSK4", 3: "HSK5", 4: "HSK5", 5: "HSK6"}
+    mapping = {
+        1: "HSK3",
+        2: "HSK4",
+        3: "HSK5",
+        4: "HSK5",
+        5: "HSK6",
+    }
     return mapping[difficulty_of(article)]
 
 
@@ -364,7 +773,12 @@ def text_for_topic(article: dict[str, Any]) -> str:
             article_title_zh(article),
             str(article.get("category") or ""),
             str(article.get("source_text") or "")[:2500],
-            first_value(data, "summary_ko", "summary_short", "summary_long"),
+            first_value(
+                data,
+                "summary_ko",
+                "summary_short",
+                "summary_long",
+            ),
             vocab_text,
         ]
     ).lower()
@@ -386,6 +800,7 @@ def topic_of(article: dict[str, Any]) -> str:
         "문화": "문화·생활",
         "생활": "문화·생활",
         "문화·생활": "문화·생활",
+        "연예": "연예",
         "스포츠": "스포츠",
     }
 
@@ -398,7 +813,11 @@ def topic_of(article: dict[str, Any]) -> str:
     scores: dict[str, int] = {}
 
     for topic, keywords in TOPIC_KEYWORDS.items():
-        scores[topic] = sum(1 for keyword in keywords if keyword.lower() in text)
+        scores[topic] = sum(
+            1
+            for keyword in keywords
+            if keyword.lower() in text
+        )
 
     best_topic = max(scores, key=scores.get)
 
@@ -444,7 +863,11 @@ def sentence_pairs_of(article: dict[str, Any]) -> list[dict[str, Any]]:
     pairs = data.get("sentence_pairs")
 
     if isinstance(pairs, list) and pairs:
-        return [item for item in pairs if isinstance(item, dict)]
+        return [
+            item
+            for item in pairs
+            if isinstance(item, dict)
+        ]
 
     chinese = first_value(
         data,
@@ -463,7 +886,13 @@ def sentence_pairs_of(article: dict[str, Any]) -> list[dict[str, Any]]:
     if not chinese and not korean:
         return []
 
-    return [{"zh": chinese, "pinyin": pinyin, "ko": korean}]
+    return [
+        {
+            "zh": chinese,
+            "pinyin": pinyin,
+            "ko": korean,
+        }
+    ]
 
 
 def value_from_item(item: dict[str, Any], *keys: str) -> str:
@@ -480,7 +909,9 @@ def safe(value: Any) -> str:
     return escape(str(value or ""))
 
 
-def summary_values(article: dict[str, Any]) -> tuple[str, str, list[str]]:
+def summary_values(
+    article: dict[str, Any],
+) -> tuple[str, str, list[str]]:
     data = study_data(article)
 
     short_summary = first_value(
@@ -522,18 +953,124 @@ def summary_values(article: dict[str, Any]) -> tuple[str, str, list[str]]:
     return short_summary, long_summary, reading_points
 
 
+def searchable_text(article: dict[str, Any]) -> str:
+    data = study_data(article)
+    vocabulary = data.get("vocabulary") or []
+
+    vocab_text = " ".join(
+        " ".join(
+            [
+                value_from_item(item, "word", "zh", "chinese"),
+                value_from_item(item, "pinyin"),
+                value_from_item(
+                    item,
+                    "meaning_ko",
+                    "meaning",
+                    "ko",
+                ),
+            ]
+        )
+        for item in vocabulary
+        if isinstance(item, dict)
+    )
+
+    return " ".join(
+        [
+            article_title_ko(article),
+            article_title_zh(article),
+            article_pinyin(article),
+            publisher_of(article),
+            topic_of(article),
+            str(article.get("source_text") or ""),
+            first_value(
+                data,
+                "summary_ko",
+                "summary_short",
+                "summary_long",
+                "summary_zh",
+            ),
+            vocab_text,
+        ]
+    ).lower()
+
+
+def render_brand_bar() -> None:
+    st.markdown(
+        """
+        <div class="brand-bar">
+            <div class="brand-wrap">
+                <div class="brand-mark">中</div>
+                <div>
+                    <div class="brand-title">오늘의 중국어 뉴스</div>
+                    <div class="brand-caption">
+                        K-News로 매일 쌓는 실전 중국어
+                    </div>
+                </div>
+            </div>
+            <div class="top-nav">
+                <span class="nav-item active">홈</span>
+                <span class="nav-item">기사 찾기</span>
+                <span class="nav-item">단어장</span>
+                <span class="nav-item">즐겨찾기</span>
+                <span class="nav-item">마이페이지</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_hero() -> None:
+    st.markdown(
+        """
+        <div class="hero-shell">
+            <div class="hero-eyebrow">매일 업데이트되는 실전 중국어</div>
+            <div class="hero-heading">
+                오늘의 한국 뉴스를<br>
+                중국어 학습 콘텐츠로 만나보세요
+            </div>
+            <div class="hero-copy">
+                기사 번역부터 병음, 핵심 단어, 문법, 퀴즈까지
+                한 화면에서 이어서 공부할 수 있어요.
+                노트북과 모바일 어디서든 편하게 학습해보세요.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_topic_row(articles: list[dict[str, Any]]) -> None:
+    topic_counts = {
+        topic: sum(
+            1
+            for article in articles
+            if topic_of(article) == topic
+        )
+        for topic in TOPIC_OPTIONS
+        if topic != "전체"
+    }
+
+    chips = "".join(
+        (
+            '<span class="topic-chip">'
+            f'{TOPIC_ICONS.get(topic, "•")} '
+            f'{safe(topic)} {count}'
+            "</span>"
+        )
+        for topic, count in topic_counts.items()
+    )
+
+    st.markdown(
+        f'<div class="topic-row">{chips}</div>',
+        unsafe_allow_html=True,
+    )
+
+
 articles = load_articles()
 
-st.markdown(
-    '<div class="main-title">📰 오늘의 중국어 뉴스</div>',
-    unsafe_allow_html=True,
-)
-st.markdown(
-    '<div class="sub-title">'
-    "한국 주요 뉴스를 중국어로 읽고 단어·문법·퀴즈까지 공부해요"
-    "</div>",
-    unsafe_allow_html=True,
-)
+render_brand_bar()
+render_hero()
 
 if not articles:
     st.warning("아직 저장된 기사가 없습니다.")
@@ -541,10 +1078,15 @@ if not articles:
 
 
 with st.sidebar:
-    st.header("학습 설정")
+    st.markdown("### 기사 찾기")
+
+    search_word = st.text_input(
+        "검색",
+        placeholder="AI, 축구, 영화, 중국 등",
+    )
 
     selected_topic = st.radio(
-        "주제",
+        "카테고리",
         options=TOPIC_OPTIONS,
         index=0,
     )
@@ -552,52 +1094,78 @@ with st.sidebar:
     selected_levels = st.multiselect(
         "난이도",
         options=[1, 2, 3, 4, 5],
-        default=[2, 3, 4],
+        default=[1, 2, 3, 4, 5],
         format_func=lambda value: (
             f"{hsk_label({'study_data': {'difficulty': value}})} "
             f"· {difficulty_label(value)}"
         ),
     )
 
-    search_word = st.text_input(
-        "기사 검색",
-        placeholder="AI, 중국, 경제 등",
+    sort_option = st.selectbox(
+        "정렬",
+        options=["추천순", "최신순", "쉬운 순"],
     )
 
     st.divider()
 
-    show_korean = st.toggle("한국어 해석 보기", value=True)
-    show_pinyin = st.toggle("병음 보기", value=True)
+    st.markdown("### 읽기 설정")
+    show_korean = st.toggle(
+        "한국어 해석 보기",
+        value=True,
+    )
+    show_pinyin = st.toggle(
+        "병음 보기",
+        value=True,
+    )
 
-    if st.button("새로고침", use_container_width=True):
+    st.divider()
+
+    if st.button(
+        "기사 목록 새로고침",
+        use_container_width=True,
+    ):
         st.cache_data.clear()
         st.rerun()
+
+    st.caption(
+        "단어장·즐겨찾기·마이페이지는 "
+        "다음 단계에서 실제 저장 기능과 연결됩니다."
+    )
 
 
 filtered_articles: list[dict[str, Any]] = []
 
 for article in articles:
-    if selected_topic != "전체" and topic_of(article) != selected_topic:
+    if (
+        selected_topic != "전체"
+        and topic_of(article) != selected_topic
+    ):
         continue
 
     if difficulty_of(article) not in selected_levels:
         continue
 
     if search_word:
-        searchable = " ".join(
-            [
-                article_title_ko(article),
-                article_title_zh(article),
-                str(article.get("category") or ""),
-                publisher_of(article),
-                topic_of(article),
-            ]
-        ).lower()
+        needle = search_word.lower().strip()
 
-        if search_word.lower().strip() not in searchable:
+        if needle not in searchable_text(article):
             continue
 
     filtered_articles.append(article)
+
+
+if sort_option == "추천순":
+    filtered_articles.sort(
+        key=recommendation_score,
+        reverse=True,
+    )
+elif sort_option == "쉬운 순":
+    filtered_articles.sort(
+        key=lambda article: (
+            difficulty_of(article),
+            -recommendation_score(article),
+        )
+    )
 
 
 if not filtered_articles:
@@ -605,42 +1173,132 @@ if not filtered_articles:
     st.stop()
 
 
-recommended = max(filtered_articles, key=recommendation_score)
+recommended = max(
+    filtered_articles,
+    key=recommendation_score,
+)
 recommended_data = study_data(recommended)
 recommended_short, _, _ = summary_values(recommended)
 
-st.subheader("🔥 오늘의 추천 기사")
-
 st.markdown(
-    f"""
-    <div class="hero-card">
-        <span class="topic-badge">{safe(topic_of(recommended))}</span>
-        <span class="meta-badge">{safe(publisher_of(recommended))}</span>
-        <span class="meta-badge">{safe(hsk_label(recommended))}</span>
-        <span class="meta-badge">추천도 {recommendation_score(recommended)}점</span>
-        <span class="meta-badge">예상 {estimated_minutes(recommended)}분</span>
-        <span class="meta-badge">
-            단어 {len(recommended_data.get("vocabulary") or [])}개
-        </span>
-        <h2 style="margin-top:0.7rem; margin-bottom:0.45rem;">
-            {safe(article_title_ko(recommended))}
-        </h2>
-        <div class="small-muted">{safe(article_title_zh(recommended))}</div>
-        {
-            f'<p style="margin-top:0.9rem;">{safe(recommended_short)}</p>'
-            if recommended_short
-            else ''
-        }
+    """
+    <div class="section-heading">
+        <div>
+            <div class="section-title">오늘의 추천과 학습 현황</div>
+            <div class="section-desc">
+                지금 읽기 좋은 기사와 오늘의 학습 정보를 확인해보세요.
+            </div>
+        </div>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
-if st.button("추천 기사 공부하기", type="primary"):
-    st.session_state["selected_article_id"] = recommended.get("id")
+recommend_col, stat_col = st.columns([2.15, 1])
+
+with recommend_col:
+    st.markdown(
+        f"""
+        <div class="recommend-card">
+            <span class="badge badge-topic">
+                {safe(TOPIC_ICONS.get(topic_of(recommended), "✦"))}
+                {safe(topic_of(recommended))}
+            </span>
+            <span class="badge">{safe(publisher_of(recommended))}</span>
+            <span class="badge">{safe(hsk_label(recommended))}</span>
+            <span class="badge badge-accent">
+                추천도 {recommendation_score(recommended)}점
+            </span>
+            <div class="article-title" style="font-size:1.48rem;">
+                {safe(article_title_ko(recommended))}
+            </div>
+            <div class="article-chinese-preview">
+                {safe(article_title_zh(recommended))}
+            </div>
+            {
+                (
+                    '<p style="margin-top:0.9rem;line-height:1.7;">'
+                    f'{safe(recommended_short)}'
+                    '</p>'
+                )
+                if recommended_short
+                else ''
+            }
+            <div class="small-muted" style="margin-top:0.85rem;">
+                예상 {estimated_minutes(recommended)}분 ·
+                단어 {len(recommended_data.get("vocabulary") or [])}개 ·
+                {format_date(recommended.get("published_at"))}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if st.button(
+        "추천 기사 바로 공부하기",
+        type="primary",
+        use_container_width=True,
+    ):
+        st.session_state["selected_article_id"] = recommended.get("id")
+        st.rerun()
+
+with stat_col:
+    st.markdown(
+        f"""
+        <div class="dashboard-card">
+            <div class="dashboard-label">현재 확인 가능한 기사</div>
+            <div class="dashboard-value">{len(filtered_articles)}개</div>
+            <div class="dashboard-copy">
+                선택한 카테고리와 난이도 조건에 맞는 기사예요.
+            </div>
+            <hr style="border:none;border-top:1px solid #e8edf5;margin:1rem 0;">
+            <div class="dashboard-label">오늘 추천 난이도</div>
+            <div class="dashboard-value">{safe(hsk_label(recommended))}</div>
+            <div class="dashboard-copy">
+                약 {estimated_minutes(recommended)}분이면 학습할 수 있어요.
+            </div>
+            <hr style="border:none;border-top:1px solid #e8edf5;margin:1rem 0;">
+            <div class="dashboard-label">학습 기능</div>
+            <div class="dashboard-copy">
+                문장별 읽기 · 핵심 단어 · 문법 · 퀴즈
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
-st.subheader("📚 기사 선택")
+st.markdown(
+    """
+    <div class="section-heading">
+        <div>
+            <div class="section-title">카테고리 둘러보기</div>
+            <div class="section-desc">
+                관심 있는 주제의 최신 기사를 골라보세요.
+            </div>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+render_topic_row(articles)
+
+
+st.markdown(
+    """
+    <div class="section-heading">
+        <div>
+            <div class="section-title">최신 학습 기사</div>
+            <div class="section-desc">
+                아래 기사 중 하나를 선택하면 학습 화면으로 이어집니다.
+            </div>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 
 default_index = 0
 selected_id = st.session_state.get("selected_article_id")
@@ -650,15 +1308,74 @@ for index, article in enumerate(filtered_articles):
         default_index = index
         break
 
+
+preview_count = min(len(filtered_articles), 8)
+
+for index, article in enumerate(filtered_articles[:preview_count]):
+    summary_short, _, _ = summary_values(article)
+
+    card_col, button_col = st.columns([5.5, 1])
+
+    with card_col:
+        st.markdown(
+            f"""
+            <div class="article-list-card">
+                <span class="badge badge-topic">
+                    {safe(TOPIC_ICONS.get(topic_of(article), "✦"))}
+                    {safe(topic_of(article))}
+                </span>
+                <span class="badge">{safe(hsk_label(article))}</span>
+                <span class="badge">
+                    {estimated_minutes(article)}분
+                </span>
+                <div class="article-title">
+                    {safe(article_title_ko(article))}
+                </div>
+                <div class="article-chinese-preview">
+                    {safe(article_title_zh(article))}
+                </div>
+                {
+                    (
+                        '<div class="small-muted" '
+                        'style="margin-top:0.65rem;line-height:1.55;">'
+                        f'{safe(summary_short[:135])}'
+                        '</div>'
+                    )
+                    if summary_short
+                    else ''
+                }
+                <div class="small-muted" style="margin-top:0.75rem;">
+                    {safe(publisher_of(article))} ·
+                    {format_date(article.get("published_at"))} ·
+                    추천도 {recommendation_score(article)}점
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with button_col:
+        st.write("")
+        st.write("")
+
+        if st.button(
+            "공부하기",
+            key=f"open_article_{article.get('id')}_{index}",
+            use_container_width=True,
+        ):
+            st.session_state["selected_article_id"] = article.get("id")
+            st.rerun()
+
+
 selected_article = st.selectbox(
-    "공부할 기사를 골라주세요",
+    "선택한 기사",
     options=filtered_articles,
     index=default_index,
     format_func=lambda article: (
         f"[{topic_of(article)} · {publisher_of(article)}] "
-        f"{article_title_ko(article)} "
-        f"· {hsk_label(article)}"
+        f"{article_title_ko(article)} · {hsk_label(article)}"
     ),
+    label_visibility="collapsed",
 )
 
 st.session_state["selected_article_id"] = selected_article.get("id")
@@ -666,9 +1383,23 @@ st.session_state["selected_article_id"] = selected_article.get("id")
 data = study_data(selected_article)
 level = difficulty_of(selected_article)
 
-st.divider()
+st.markdown(
+    """
+    <div class="section-heading">
+        <div>
+            <div class="section-title">기사로 공부하기</div>
+            <div class="section-desc">
+                중국어 기사와 학습 자료를 차례대로 살펴보세요.
+            </div>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
-left, right = st.columns([4, 1])
+st.markdown('<div class="reading-header">', unsafe_allow_html=True)
+
+left, right = st.columns([4, 1.15])
 
 with left:
     st.caption(
@@ -678,7 +1409,9 @@ with left:
                 [
                     topic_of(selected_article),
                     publisher_of(selected_article),
-                    format_date(selected_article.get("published_at")),
+                    format_date(
+                        selected_article.get("published_at")
+                    ),
                 ],
             )
         )
@@ -705,8 +1438,14 @@ with left:
 with right:
     st.metric("난이도", hsk_label(selected_article))
     st.caption(difficulty_label(level))
-    st.metric("추천도", f"{recommendation_score(selected_article)}점")
-    st.metric("예상 시간", f"{estimated_minutes(selected_article)}분")
+    st.metric(
+        "추천도",
+        f"{recommendation_score(selected_article)}점",
+    )
+    st.metric(
+        "예상 시간",
+        f"{estimated_minutes(selected_article)}분",
+    )
 
     source_url = selected_article.get("source_url")
 
@@ -717,36 +1456,90 @@ with right:
             use_container_width=True,
         )
 
+st.markdown("</div>", unsafe_allow_html=True)
 
-summary_short, summary_long, reading_points = summary_values(selected_article)
+
+summary_short, summary_long, reading_points = summary_values(
+    selected_article
+)
 summary_zh = first_value(data, "summary_zh")
 
 if summary_short or summary_long or summary_zh or reading_points:
-    st.subheader("📌 기사 요약")
+    st.markdown(
+        """
+        <div class="section-heading">
+            <div>
+                <div class="section-title">기사 핵심 정리</div>
+                <div class="section-desc">
+                    본문을 읽기 전에 핵심 내용을 먼저 확인해보세요.
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    if summary_short:
-        with st.container(border=True):
-            st.markdown("**한 줄 요약**")
-            st.write(summary_short)
+    summary_columns = st.columns(2)
 
-    if summary_long:
-        with st.container(border=True):
-            st.markdown("**3줄 요약**")
-            st.write(summary_long)
-
-    if summary_zh:
-        with st.container(border=True):
-            st.markdown("**중국어 요약**")
+    with summary_columns[0]:
+        if summary_short:
             st.markdown(
-                f'<div class="chinese-sentence">{safe(summary_zh)}</div>',
+                f"""
+                <div class="summary-box">
+                    <div class="small-muted">한 줄 요약</div>
+                    <div style="margin-top:0.45rem;line-height:1.7;">
+                        {safe(summary_short)}
+                    </div>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
 
-    if reading_points:
-        with st.container(border=True):
-            st.markdown("**읽기 포인트**")
-            for point in reading_points:
-                st.markdown(f"- {point}")
+        if summary_long:
+            st.markdown(
+                f"""
+                <div class="summary-box">
+                    <div class="small-muted">상세 요약</div>
+                    <div style="margin-top:0.45rem;line-height:1.7;">
+                        {safe(summary_long)}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    with summary_columns[1]:
+        if summary_zh:
+            st.markdown(
+                f"""
+                <div class="summary-box">
+                    <div class="small-muted">중국어 요약</div>
+                    <div class="chinese-sentence">
+                        {safe(summary_zh)}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        if reading_points:
+            points_html = "".join(
+                f"<li>{safe(point)}</li>"
+                for point in reading_points
+            )
+
+            st.markdown(
+                f"""
+                <div class="summary-box">
+                    <div class="small-muted">읽기 포인트</div>
+                    <ul style="margin:0.55rem 0 0;padding-left:1.2rem;
+                               line-height:1.75;">
+                        {points_html}
+                    </ul>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
 
 reading_tab, vocab_tab, grammar_tab, quiz_tab = st.tabs(
@@ -819,7 +1612,12 @@ with vocab_tab:
             if not isinstance(item, dict):
                 continue
 
-            word = value_from_item(item, "word", "zh", "chinese")
+            word = value_from_item(
+                item,
+                "word",
+                "zh",
+                "chinese",
+            )
             pinyin = value_from_item(item, "pinyin")
             meaning = value_from_item(
                 item,
@@ -827,7 +1625,11 @@ with vocab_tab:
                 "meaning",
                 "ko",
             )
-            example = value_from_item(item, "example", "sentence")
+            example = value_from_item(
+                item,
+                "example",
+                "sentence",
+            )
 
             with cols[index % 2]:
                 with st.container(border=True):
@@ -864,9 +1666,14 @@ with grammar_tab:
     grammar_items = data.get("grammar") or []
 
     if not grammar_items:
-        st.info("이 기사에서 별도로 추출된 문법 표현이 없습니다.")
+        st.info(
+            "이 기사에서 별도로 추출된 문법 표현이 없습니다."
+        )
     else:
-        for index, item in enumerate(grammar_items, start=1):
+        for index, item in enumerate(
+            grammar_items,
+            start=1,
+        ):
             if isinstance(item, str):
                 with st.container(border=True):
                     st.markdown(f"**{index}. {item}**")
@@ -887,7 +1694,11 @@ with grammar_tab:
                 "explanation",
                 "meaning",
             )
-            example = value_from_item(item, "example", "sentence")
+            example = value_from_item(
+                item,
+                "example",
+                "sentence",
+            )
 
             with st.container(border=True):
                 st.markdown(f"### {index}. {pattern}")
@@ -896,7 +1707,9 @@ with grammar_tab:
                     st.write(explanation)
 
                 if example:
-                    st.markdown(f"**기사 속 예문**  \n{example}")
+                    st.markdown(
+                        f"**기사 속 예문**  \n{example}"
+                    )
 
 
 with quiz_tab:
@@ -905,7 +1718,10 @@ with quiz_tab:
     if not quizzes:
         st.info("생성된 퀴즈가 없습니다.")
     else:
-        for index, quiz in enumerate(quizzes, start=1):
+        for index, quiz in enumerate(
+            quizzes,
+            start=1,
+        ):
             if not isinstance(quiz, dict):
                 continue
 
@@ -914,7 +1730,11 @@ with quiz_tab:
                 "question",
                 "question_ko",
             )
-            options = quiz.get("options") or quiz.get("choices") or []
+            options = (
+                quiz.get("options")
+                or quiz.get("choices")
+                or []
+            )
             answer = quiz.get("answer")
             explanation = value_from_item(
                 quiz,
@@ -929,41 +1749,67 @@ with quiz_tab:
                     selected_answer = st.radio(
                         "정답 선택",
                         options=options,
-                        key=f"quiz_{selected_article.get('id')}_{index}",
+                        key=(
+                            f"quiz_"
+                            f"{selected_article.get('id')}_"
+                            f"{index}"
+                        ),
                         index=None,
                     )
 
                     if st.button(
                         f"{index}번 정답 확인",
-                        key=f"check_{selected_article.get('id')}_{index}",
+                        key=(
+                            f"check_"
+                            f"{selected_article.get('id')}_"
+                            f"{index}"
+                        ),
                     ):
                         correct_text = ""
 
                         if isinstance(answer, int):
                             if 0 <= answer < len(options):
-                                correct_text = str(options[answer])
+                                correct_text = str(
+                                    options[answer]
+                                )
                             elif 1 <= answer <= len(options):
-                                correct_text = str(options[answer - 1])
+                                correct_text = str(
+                                    options[answer - 1]
+                                )
                         else:
                             correct_text = str(answer or "")
 
                         if selected_answer is None:
-                            st.warning("답을 먼저 선택해주세요.")
-                        elif str(selected_answer) == correct_text:
+                            st.warning(
+                                "답을 먼저 선택해주세요."
+                            )
+                        elif (
+                            str(selected_answer)
+                            == correct_text
+                        ):
                             st.success("정답이에요! 🎉")
                         else:
                             st.error(
-                                f"아쉬워요. 정답은 `{correct_text}`입니다."
+                                "아쉬워요. 정답은 "
+                                f"`{correct_text}`입니다."
                             )
 
                         if explanation:
                             st.info(explanation)
                 else:
-                    st.write("정답:", answer or "정답 정보 없음")
+                    st.write(
+                        "정답:",
+                        answer or "정답 정보 없음",
+                    )
 
 
-st.divider()
-st.caption(
-    "기사와 번역은 자동 수집된 자료입니다. "
-    "번역 및 병음은 문맥에 따라 일부 부정확할 수 있습니다."
+st.markdown(
+    """
+    <div class="footer-note">
+        기사와 번역은 자동 수집된 자료입니다.
+        번역 및 병음은 문맥에 따라 일부 부정확할 수 있습니다.
+        저장 기능과 개인 학습 통계는 다음 단계에서 연결됩니다.
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
