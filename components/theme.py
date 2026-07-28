@@ -31,7 +31,7 @@ def apply_theme() -> None:
 
         .block-container {
             max-width: 1180px;
-            padding-top: 1.2rem;
+            padding-top: 5.5rem;
             padding-bottom: 5rem;
         }
 
@@ -77,7 +77,7 @@ def apply_theme() -> None:
             background:
                 radial-gradient(circle at 50% -10%, #DDF3E6 0%, transparent 44%),
                 linear-gradient(180deg, #FFFFFF 0%, #F5FBF7 100%);
-            margin: 1rem 0 2.5rem;
+            margin: 1.5rem 0 2.5rem;
         }
 
         .eyebrow {
