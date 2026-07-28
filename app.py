@@ -236,7 +236,36 @@ def format_date(value: Any) -> str:
 
 
 def publisher_of(article: dict[str, Any]) -> str:
-    return article.get("publisher_name") or "언론사 미상"
+    saved_name = article.get("publisher_name")
+
+    if isinstance(saved_name, str) and saved_name.strip():
+        return saved_name.strip()
+
+    source_url = str(
+        article.get("source_url")
+        or article.get("original_url")
+        or article.get("url")
+        or ""
+    ).lower()
+
+    publisher_domains = {
+        "news.sbs.co.kr": "SBS",
+        "sbs.co.kr": "SBS",
+        "imnews.imbc.com": "MBC",
+        "imbc.com": "MBC",
+        "news.kbs.co.kr": "KBS",
+        "kbs.co.kr": "KBS",
+        "chosun.com": "조선일보",
+        "joongang.co.kr": "중앙일보",
+        "donga.com": "동아일보",
+        "mk.co.kr": "매일경제",
+    }
+
+    for domain, publisher in publisher_domains.items():
+        if domain in source_url:
+            return publisher
+
+    return "언론사 미상"
 
 
 def recommendation_score(article: dict[str, Any]) -> int:
