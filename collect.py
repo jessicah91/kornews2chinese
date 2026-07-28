@@ -11,7 +11,7 @@ LOGGER=logging.getLogger(__name__)
 def main()->None:
     s=Settings.from_env(); db=get_admin_client(s.supabase_url,s.supabase_service_role_key); seen=existing_urls(db); saved=[]
     for query in s.news_queries:
-        candidates=search_naver_news(s.naver_client_id,s.naver_client_secret,query,display=max(15,s.articles_per_query*10)); used=0
+        candidates=search_naver_news(s.naver_client_id,s.naver_client_secret,query,display=max(100)); used=0
         while used<s.articles_per_query:
             c=choose_candidate(candidates,seen)
             if not c:break
