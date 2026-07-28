@@ -540,8 +540,36 @@ def apply_theme() -> None:
             color: var(--green-dark) !important;
         }
 
-        /* radio / checkbox / toggle accents */
-        input[type="radio"], input[type="checkbox"] { accent-color: var(--green) !important; }
+        /* 라디오 버튼 · 체크박스 · 토글 초록색 */
+input[type="radio"],
+input[type="checkbox"] {
+    accent-color: #34C759 !important;
+}
+
+/* 선택된 라디오 버튼 */
+[data-testid="stRadio"] [role="radio"][aria-checked="true"] {
+    background-color: #34C759 !important;
+    border-color: #34C759 !important;
+}
+
+/* Streamlit 버전별 라디오 버튼 대응 */
+[data-testid="stRadio"] label:has(input:checked) > div:first-child {
+    background-color: #34C759 !important;
+    border-color: #34C759 !important;
+}
+
+/* 선택된 원 안쪽 흰 점 */
+[data-testid="stRadio"] label:has(input:checked) > div:first-child > div {
+    background-color: #FFFFFF !important;
+}
+
+[data-testid="stRadio"] [role="radiogroup"] label {
+    color: #48484A !important;
+}
+
+[data-testid="stToggle"] button[aria-checked="true"] {
+    background-color: #34C759 !important;
+}
         [data-testid="stRadio"] [role="radiogroup"] label { color: #48484A !important; }
         [data-testid="stToggle"] button[aria-checked="true"] { background-color: var(--green) !important; }
 
