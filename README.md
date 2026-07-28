@@ -1,33 +1,51 @@
-# K-News Chinese Reader
+# 오늘의 중국어 V3
 
-네이버 뉴스 검색 → 기사 본문 추출 → DeepL 중국어 번역 → 병음/단어/문법/퀴즈 생성 → Supabase 저장 → Streamlit 웹사이트 표시 프로젝트입니다.
+Streamlit + Supabase 기반 한국 뉴스 중국어 학습 서비스입니다.
 
-## 지금 사용자가 해야 할 일
+## 적용 방법
 
-1. ZIP 내부 파일을 GitHub 저장소 루트에 덮어쓰기합니다.
-2. 숨김 폴더 `.github`가 업로드되지 않으면 `github-workflow-main.yml` 내용을 기존 `.github/workflows/main.yml`에 붙여넣습니다.
-3. Supabase SQL Editor에서 `supabase/schema.sql`을 실행합니다. 기존 테이블이 있어도 필요한 정책을 다시 적용할 수 있습니다.
-4. GitHub Actions에서 `Daily K-News to Chinese` → `Run workflow` → mode `reprocess`를 실행해 기존 3개 기사의 단어/문법/퀴즈를 채웁니다.
-5. 그 뒤 mode `collect`를 실행해 새 기사도 확인합니다.
+기존 GitHub 저장소의 루트에 아래 구조가 되도록 파일을 업로드하세요.
 
-## Streamlit 배포
-
-Streamlit Community Cloud에서 이 GitHub 저장소를 연결하고 Main file path를 `app.py`로 지정합니다.
-Advanced settings의 Secrets에 아래를 넣습니다.
-
-```toml
-SUPABASE_URL = "https://프로젝트주소.supabase.co"
-SUPABASE_ANON_KEY = "Supabase anon key"
+```text
+app.py
+components/
+services/
+utils/
+views/
 ```
 
-배포 후 생성된 주소를 GitHub Secret `APP_URL`에 넣으면 이메일 버튼이 사이트로 연결됩니다.
+기존 `collect.py`, `news.py`, `config.py`, `.github/workflows/` 등은 삭제하지 않습니다.
 
-## 이메일(선택)
+## 필요한 패키지
 
-Resend 계정과 발신 도메인/주소 설정 후 GitHub Secrets에 `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_TO`, `APP_URL`을 추가합니다. 이 값들이 없으면 수집은 정상 동작하고 이메일만 건너뜁니다.
+기존 requirements.txt에 아래 패키지가 포함되어 있어야 합니다.
+
+```text
+streamlit
+supabase
+```
+
+## Streamlit Secrets
+
+```toml
+SUPABASE_URL="..."
+SUPABASE_ANON_KEY="..."
+```
+
+## 이번 버전에서 동작하는 기능
+
+- 상단 메뉴 실제 화면 전환
+- 홈 카테고리 버튼 실제 필터 연결
+- 기사 검색과 정렬
+- 기사 상세 학습
+- 단어 저장 및 단어장
+- 기사 즐겨찾기
+- 마이페이지 기본 학습 통계
+- 모바일 반응형
+- 초록색 Apple 스타일 UI
 
 ## 주의
 
-- DeepL만으로 문법 해설은 생성형 AI 수준이 아니며, 코드에 등록된 자주 쓰는 뉴스 문법 패턴을 탐지합니다.
-- 단어 뜻은 DeepL로 중국어→한국어 역번역합니다.
-- 일부 언론사는 본문 추출을 차단해 건너뛸 수 있습니다.
+단어장, 즐겨찾기, 학습 통계는 현재 Streamlit session_state에 저장됩니다.
+브라우저 세션이 종료되면 초기화될 수 있습니다.
+다음 단계에서 Supabase 사용자 테이블에 영구 저장하도록 연결할 수 있습니다.
