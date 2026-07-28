@@ -1,53 +1,82 @@
 from __future__ import annotations
 
-import json
+import re
 
-from openai import OpenAI
+import requests
+from pypinyin import Style, lazy_pinyin
 
-from .models import StudyArticle
+from .models import StudyArticle, SentencePair
 
-
-SYSTEM_PROMPT = """당신은 한국 뉴스를 중국어로 가르치는 전문 교사이자 번역가다.
-반드시 중국 대륙의 간체자를 사용한다. 기사 내용을 사실대로 유지하고, 원문에 없는 사실을 추가하지 않는다.
-인명·기관명·수치·날짜를 보존한다. 문단을 학습하기 좋은 문장 단위로 나누되 지나치게 축약하지 않는다.
-중국어 번역은 자연스러운 현대 표준중국어 뉴스 문체로 작성한다.
-병음은 성조 부호를 포함한다. 결과는 지정된 JSON 형식만 출력한다.
-"""
+DEEPL_FREE_URL = "https://api-free.deepl.com/v2/translate"
+DEEPL_PRO_URL = "https://api.deepl.com/v2/translate"
 
 
-def translate_article(api_key: str, model: str, *, title: str, body: str, source_url: str) -> StudyArticle:
-    client = OpenAI(api_key=api_key)
-    schema = StudyArticle.model_json_schema()
-    prompt = f"""아래 한국어 뉴스 기사를 중국어 학습자료로 변환하라.
+def _sentences(text: str) -> list[str]:
+    text = re.sub(r"\s+", " ", text).strip()
+    if not text:
+        return []
+    parts = re.split(r"(?<=[.!?。！？])\s+|(?<=[다요죠임함됨됨])\.\s*", text)
+    return [part.strip() for part in parts if len(part.strip()) >= 8]
 
-요구사항:
-- 제목과 본문 전체의 핵심 정보를 빠뜨리지 말고 번역
-- sentence_pairs에는 원문의 흐름대로 한국어 문장과 중국어 번역을 8~30개 수록
-- 원문이 짧으면 가능한 범위에서 모두 수록
-- summary_ko와 summary_zh는 각각 3~5문장
-- vocabulary는 중요한 뉴스 단어 8~15개
-- grammar는 유용한 표현 3~6개
-- quizzes는 객관식 3개
-- difficulty는 중국어 독해 난이도 1~5
-- 출처 URL은 번역문에 넣지 말 것
 
-제목: {title}
-출처: {source_url}
-본문:
-{body}
-"""
-    response = client.responses.create(
-        model=model,
-        instructions=SYSTEM_PROMPT,
-        input=prompt,
-        text={
-            "format": {
-                "type": "json_schema",
-                "name": "study_article",
-                "schema": schema,
-                "strict": True,
-            }
+def _pinyin(text: str) -> str:
+    return " ".join(lazy_pinyin(text, style=Style.TONE, neutral_tone_with_five=False))
+
+
+def _translate(api_key: str, texts: list[str]) -> list[str]:
+    if not texts:
+        return []
+    endpoint = DEEPL_FREE_URL if api_key.endswith(":fx") else DEEPL_PRO_URL
+    response = requests.post(
+        endpoint,
+        headers={
+            "Authorization": f"DeepL-Auth-Key {api_key}",
+            "Content-Type": "application/json",
         },
+        json={
+            "text": texts,
+            "source_lang": "KO",
+            "target_lang": "ZH-HANS",
+            "preserve_formatting": True,
+        },
+        timeout=90,
     )
-    raw = response.output_text
-    return StudyArticle.model_validate(json.loads(raw))
+    response.raise_for_status()
+    translated = response.json().get("translations", [])
+    if len(translated) != len(texts):
+        raise RuntimeError("DeepL returned an unexpected number of translations")
+    return [item["text"].strip() for item in translated]
+
+
+def translate_article(api_key: str, *, title: str, body: str, source_url: str) -> StudyArticle:
+    del source_url  # reserved for later learning features
+    korean_sentences = _sentences(body)[:40]
+    if not korean_sentences:
+        raise RuntimeError("No sentences were extracted from the article")
+
+    # DeepL request limits are easier to manage in chunks.
+    translated_sentences: list[str] = []
+    for start in range(0, len(korean_sentences), 20):
+        translated_sentences.extend(_translate(api_key, korean_sentences[start:start + 20]))
+
+    title_zh = _translate(api_key, [title])[0]
+    summary_ko = " ".join(korean_sentences[:3])
+    summary_zh = " ".join(translated_sentences[:3])
+
+    pairs = [
+        SentencePair(korean=ko, chinese=zh, pinyin=_pinyin(zh))
+        for ko, zh in zip(korean_sentences, translated_sentences, strict=True)
+    ]
+
+    return StudyArticle(
+        title_ko=title,
+        title_zh=title_zh,
+        title_pinyin=_pinyin(title_zh),
+        summary_ko=summary_ko,
+        summary_zh=summary_zh,
+        difficulty=3,
+        sentence_pairs=pairs,
+        vocabulary=[],
+        grammar=[],
+        quizzes=[],
+    )
