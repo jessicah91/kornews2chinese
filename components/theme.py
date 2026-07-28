@@ -605,3 +605,42 @@ input[type="checkbox"] {
         """,
         unsafe_allow_html=True,
     )
+    /* ===== 라디오 버튼 애플 초록색 ===== */
+
+/* 선택되지 않은 원 */
+[data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child {
+    border-color: #C7C7CC !important;
+}
+
+/* 선택된 원 바깥쪽 */
+[data-testid="stRadio"]
+label[data-baseweb="radio"]:has(input:checked)
+> div:first-child {
+    background-color: #34C759 !important;
+    border-color: #34C759 !important;
+}
+
+/* Streamlit 버전별 추가 대응 */
+[data-testid="stRadio"]
+[role="radiogroup"]
+label:has(input:checked)
+> div:first-child {
+    background-color: #34C759 !important;
+    border-color: #34C759 !important;
+}
+
+/* 내부 흰색 점 */
+[data-testid="stRadio"]
+label:has(input:checked)
+> div:first-child
+> div {
+    background-color: #FFFFFF !important;
+}
+
+/* 기본 빨간색 변수까지 강제로 변경 */
+:root {
+    --primary-color: #34C759 !important;
+}
+
+.stApp {
+    --primary-color: #34C759 !important;
