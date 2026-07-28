@@ -23,27 +23,27 @@ def render_article_card(article: dict[str, Any], key_prefix: str = "card") -> No
 
     st.markdown(
         f"""
-        <div class="article-card">
+        <article class="article-card">
             <span class="badge">{safe(topic(article))}</span>
             <span class="badge">{safe(hsk(article))}</span>
             <span class="badge">약 {estimated_minutes(article)}분</span>
             <div class="article-title">{safe(title_ko(article))}</div>
             <div class="article-zh">{safe(title_zh(article))}</div>
-            <div class="meta" style="margin-top:.7rem;">
+            <div class="meta" style="margin-top:.72rem;">
                 {safe(publisher(article))} · {safe(format_date(article.get("published_at")))}
             </div>
             {
-                f'<div class="meta" style="margin-top:.55rem;">{safe(summary(article))}</div>'
+                f'<div class="meta" style="margin-top:.6rem;">{safe(summary(article))}</div>'
                 if summary(article) else ''
             }
-        </div>
+        </article>
         """,
         unsafe_allow_html=True,
     )
 
-    left, right = st.columns([3, 1])
+    left, right = st.columns([3.3, 1])
     with left:
-        if st.button("기사 공부하기", key=f"{key_prefix}_open_{article_id}", type="primary", use_container_width=True):
+        if st.button("이 기사로 공부하기 →", key=f"{key_prefix}_open_{article_id}", type="primary", use_container_width=True):
             open_article(article)
             st.rerun()
     with right:

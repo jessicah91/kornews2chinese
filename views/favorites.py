@@ -8,9 +8,19 @@ from components.article_card import render_article_card
 
 
 def render_favorites(articles: list[dict[str, Any]]) -> None:
-    st.title("즐겨찾기")
     ids = st.session_state.get("saved_article_ids", [])
     saved = [article for article in articles if article.get("id") in ids]
+
+    st.markdown(
+        """
+        <section class="page-head">
+            <div class="page-eyebrow">SAVED ARTICLES</div>
+            <h1 class="page-title">즐겨찾기</h1>
+            <div class="page-copy">나중에 다시 읽고 싶은 기사와 학습 콘텐츠를 한곳에 모아보세요.</div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
 
     if not saved:
         st.markdown(
@@ -19,6 +29,9 @@ def render_favorites(articles: list[dict[str, Any]]) -> None:
         )
         return
 
-    st.caption(f"저장한 기사 {len(saved)}개")
+    st.markdown(
+        f'<div class="section-heading-row"><div class="section-heading">저장한 기사 {len(saved)}개</div><div class="section-caption">다시 학습하기</div></div>',
+        unsafe_allow_html=True,
+    )
     for article in saved:
         render_article_card(article, "favorite")

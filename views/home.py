@@ -117,10 +117,10 @@ def render_home(articles: list[dict[str, Any]]) -> None:
             """
             <section class="hero-copy-wrap">
                 <div class="hero-kicker">🌿 하루 10분 중국어 루틴</div>
-                <h1 class="hero-title">뉴스로 배우는<br><span class="accent">진짜 중국어</span></h1>
+                <h1 class="hero-title">뉴스로 배우는<br><span class="accent">중국어</span></h1>
                 <div class="hero-copy">
                     매일 한국 뉴스를 중국어 학습 콘텐츠로 바꿔드립니다.
-                    기사 한 편으로 문장, 병음, 핵심 단어, 문법 표현과 퀴즈까지 이어서 공부하세요.
+                    오늘의 표현부터 문장별 병음, 핵심 단어와 퀴즈까지 한 번에 공부하세요.
                 </div>
                 <div class="hero-proof">
                     <span>한국 뉴스 기반</span>
@@ -134,7 +134,7 @@ def render_home(articles: list[dict[str, Any]]) -> None:
 
         if articles:
             recommended = max(articles, key=recommendation_score)
-            if st.button("오늘의 뉴스로 공부하기 →", type="primary", key="hero_start", use_container_width=False):
+            if st.button("오늘의 학습 시작하기 →", type="primary", key="hero_start", use_container_width=False):
                 open_article(recommended)
                 st.rerun()
         else:

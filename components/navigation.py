@@ -13,7 +13,7 @@ def _go(page: str) -> None:
 
 def render_navigation() -> None:
     st.markdown('<div class="nav-shell">', unsafe_allow_html=True)
-    brand, *menu_cols = st.columns([2.4, 1, 1.15, 1, 1, 1.05], vertical_alignment="center")
+    brand, *menu_cols = st.columns([3.6, .72, .95, .78, .88, .92], vertical_alignment="center")
 
     with brand:
         st.markdown(

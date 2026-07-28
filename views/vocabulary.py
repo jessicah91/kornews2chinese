@@ -4,8 +4,17 @@ import streamlit as st
 
 
 def render_vocabulary() -> None:
-    st.title("단어장")
     words = st.session_state.get("saved_words", [])
+    st.markdown(
+        f"""
+        <section class="page-head">
+            <div class="page-eyebrow">MY VOCABULARY</div>
+            <h1 class="page-title">단어장</h1>
+            <div class="page-copy">기사에서 저장한 단어를 다시 보고, 중국어·병음·뜻으로 빠르게 검색하세요.</div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
 
     if not words:
         st.markdown(
@@ -22,14 +31,18 @@ def render_vocabulary() -> None:
         ).lower()
     ]
 
-    st.caption(f"저장한 단어 {len(words)}개")
+    st.markdown(
+        f'<div class="section-heading-row"><div class="section-heading">저장한 단어 {len(filtered)}개</div><div class="section-caption">전체 {len(words)}개</div></div>',
+        unsafe_allow_html=True,
+    )
+
     for index, word in enumerate(filtered):
         with st.container(border=True):
-            cols = st.columns([4, 1])
+            cols = st.columns([4.5, 1], vertical_alignment="center")
             with cols[0]:
                 st.markdown(f"### {word.get('word', '')}")
                 if word.get("pinyin"):
-                    st.caption(word["pinyin"])
+                    st.markdown(f'<div class="sentence-pinyin">{word["pinyin"]}</div>', unsafe_allow_html=True)
                 st.write(word.get("meaning", ""))
                 if word.get("example"):
                     st.markdown(f"**예문**  \n{word['example']}")

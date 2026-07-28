@@ -19,25 +19,35 @@ def render_article_detail(article: dict[str, Any]) -> None:
     article_id = article.get("id")
     data = study_data(article)
 
+    title_pinyin_html = (
+        f'<div class="sentence-pinyin" style="margin-top:.55rem;">{safe(title_pinyin(article))}</div>'
+        if st.session_state.get("show_pinyin") and title_pinyin(article)
+        else ""
+    )
+    title_zh_html = (
+        f'<div class="article-zh" style="font-size:1.18rem;margin-top:.65rem;">{safe(title_zh(article))}</div>'
+        if title_zh(article)
+        else ""
+    )
+
     st.markdown(
         f"""
-        <div style="margin-top:1.1rem;">
-            <span class="badge">{safe(topic(article))}</span>
-            <span class="badge">{safe(hsk(article))}</span>
-            <span class="badge">약 {estimated_minutes(article)}분</span>
-            <div class="meta" style="margin-top:.6rem;">
+        <section class="detail-hero">
+            <div>
+                <span class="badge">{safe(topic(article))}</span>
+                <span class="badge">{safe(hsk(article))}</span>
+                <span class="badge">약 {estimated_minutes(article)}분</span>
+            </div>
+            <div class="meta" style="margin-top:.55rem;">
                 {safe(publisher(article))} · {safe(format_date(article.get("published_at")))}
             </div>
-        </div>
+            <h1 style="font-size:clamp(2rem,4vw,3.1rem);line-height:1.2;margin:1rem 0 0;">{safe(title_ko(article))}</h1>
+            {title_zh_html}
+            {title_pinyin_html}
+        </section>
         """,
         unsafe_allow_html=True,
     )
-
-    st.title(title_ko(article))
-    if title_zh(article):
-        st.markdown(f'<div class="article-zh" style="font-size:1.3rem;">{safe(title_zh(article))}</div>', unsafe_allow_html=True)
-    if st.session_state.get("show_pinyin") and title_pinyin(article):
-        st.markdown(f'<div class="sentence-pinyin">{safe(title_pinyin(article))}</div>', unsafe_allow_html=True)
 
     actions = st.columns([1, 1, 2])
     saved = article_id in st.session_state.get("saved_article_ids", [])

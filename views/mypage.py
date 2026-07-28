@@ -8,14 +8,22 @@ from utils.articles import title_ko
 
 
 def render_mypage(articles: list[dict[str, Any]]) -> None:
-    st.title("마이페이지")
-    st.caption("현재 통계는 이 브라우저 세션에 저장된 학습 기록을 기준으로 표시됩니다.")
-
     studied_ids = st.session_state.get("studied_article_ids", [])
     saved_ids = st.session_state.get("saved_article_ids", [])
     words = st.session_state.get("saved_words", [])
 
-    cols = st.columns(3)
+    st.markdown(
+        """
+        <section class="page-head">
+            <div class="page-eyebrow">LEARNING PROGRESS</div>
+            <h1 class="page-title">마이페이지</h1>
+            <div class="page-copy">현재 브라우저에 저장된 학습 기록과 기본 표시 설정을 확인하세요.</div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    cols = st.columns(3, gap="medium")
     stats = [
         ("학습한 기사", len(studied_ids), "개"),
         ("저장한 단어", len(words), "개"),
@@ -25,7 +33,7 @@ def render_mypage(articles: list[dict[str, Any]]) -> None:
         with col:
             st.markdown(
                 f"""
-                <div class="surface">
+                <div class="stat-card">
                     <div class="meta">{label}</div>
                     <div class="stat-number">{number}{unit}</div>
                 </div>
@@ -39,11 +47,13 @@ def render_mypage(articles: list[dict[str, Any]]) -> None:
     if not recent:
         st.markdown('<div class="empty">아직 학습 기록이 없습니다.</div>', unsafe_allow_html=True)
     else:
-        for article in recent:
-            if st.button(title_ko(article), key=f"recent_{article.get('id')}", use_container_width=True):
-                st.session_state["selected_article_id"] = article.get("id")
-                st.rerun()
+        with st.container(border=True):
+            for article in recent:
+                if st.button(title_ko(article), key=f"recent_{article.get('id')}", use_container_width=True):
+                    st.session_state["selected_article_id"] = article.get("id")
+                    st.rerun()
 
     st.markdown('<div class="section-heading">학습 설정</div>', unsafe_allow_html=True)
-    st.session_state["show_pinyin"] = st.toggle("병음 기본 표시", value=st.session_state.get("show_pinyin", True))
-    st.session_state["show_korean"] = st.toggle("한국어 기본 표시", value=st.session_state.get("show_korean", True))
+    with st.container(border=True):
+        st.session_state["show_pinyin"] = st.toggle("병음 기본 표시", value=st.session_state.get("show_pinyin", True))
+        st.session_state["show_korean"] = st.toggle("한국어 기본 표시", value=st.session_state.get("show_korean", True))
