@@ -31,13 +31,13 @@ def apply_theme() -> None:
 
         .block-container {
             max-width: 1180px;
-            padding-top: 1.2rem;
+            padding-top: 4.8rem;
             padding-bottom: 5rem;
         }
 
         header[data-testid="stHeader"] {
-            background: rgba(247, 251, 248, 0.82);
-            backdrop-filter: blur(18px);
+            background: rgba(247, 251, 248, 0.85);
+            backdrop-filter: blur(20px);
         }
 
         #MainMenu, footer {
@@ -70,14 +70,14 @@ def apply_theme() -> None:
         }
 
         .hero {
-            padding: 4.4rem 2rem 3.9rem;
+            padding: 3.6rem 2rem 3.9rem;
             text-align: center;
             border: 1px solid var(--green-border);
             border-radius: 30px;
             background:
                 radial-gradient(circle at 50% -10%, #DDF3E6 0%, transparent 44%),
                 linear-gradient(180deg, #FFFFFF 0%, #F5FBF7 100%);
-            margin: 1rem 0 2.5rem;
+            margin: 2rem 0 2.5rem;
         }
 
         .eyebrow {
