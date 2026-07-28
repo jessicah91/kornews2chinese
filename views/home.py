@@ -36,47 +36,66 @@ TOPIC_ICONS = {
 def _render_expression_card(articles: list[dict[str, Any]]) -> dict[str, Any]:
     expression = get_daily_expression(articles)
 
-    example_html = ""
-    if expression.get("example"):
-        translation = (
-            f'<div class="expression-example-ko">{safe(expression.get("translation"))}</div>'
-            if expression.get("translation")
-            else ""
-        )
-        example_html = f"""
-        <div class="expression-example">
-            <div class="expression-example-title">기사처럼 써보기</div>
-            <div class="expression-example-zh">{safe(expression.get('example'))}</div>
-            {translation}
-        </div>
-        """
+    card_html = [
+        '<section class="hero-expression">',
+        '<div class="expression-head">',
+        '<div class="expression-label">🌱 오늘의 표현</div>',
+        (
+            f'<div class="expression-type">'
+            f'{safe(expression.get("type") or "문법")}'
+            f'</div>'
+        ),
+        '</div>',
+        (
+            f'<div class="expression-main">'
+            f'{safe(expression.get("expression") or "")}'
+            f'</div>'
+        ),
+    ]
 
-    pinyin_html = (
-        f'<div class="expression-pinyin">{safe(expression.get("pinyin"))}</div>'
-        if expression.get("pinyin")
-        else ""
-    )
-    meaning_html = (
-        f'<div class="expression-meaning">{safe(expression.get("meaning"))}</div>'
-        if expression.get("meaning")
-        else ""
-    )
+    if expression.get("pinyin"):
+        card_html.append(
+            f'<div class="expression-pinyin">'
+            f'{safe(expression.get("pinyin"))}'
+            f'</div>'
+        )
+
+    if expression.get("meaning"):
+        card_html.append(
+            f'<div class="expression-meaning">'
+            f'{safe(expression.get("meaning"))}'
+            f'</div>'
+        )
+
+    if expression.get("example"):
+        card_html.extend(
+            [
+                '<div class="expression-example">',
+                '<div class="expression-example-title">기사처럼 써보기</div>',
+                (
+                    f'<div class="expression-example-zh">'
+                    f'{safe(expression.get("example"))}'
+                    f'</div>'
+                ),
+            ]
+        )
+
+        if expression.get("translation"):
+            card_html.append(
+                f'<div class="expression-example-ko">'
+                f'{safe(expression.get("translation"))}'
+                f'</div>'
+            )
+
+        card_html.append('</div>')
+
+    card_html.append('</section>')
 
     st.markdown(
-        f"""
-        <section class="hero-expression">
-            <div class="expression-head">
-                <div class="expression-label">🌱 오늘의 표현</div>
-                <div class="expression-type">{safe(expression.get('type', '문법'))}</div>
-            </div>
-            <div class="expression-main">{safe(expression.get('expression'))}</div>
-            {pinyin_html}
-            {meaning_html}
-            {example_html}
-        </section>
-        """,
+        "".join(card_html),
         unsafe_allow_html=True,
     )
+
     return expression
 
 
