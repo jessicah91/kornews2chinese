@@ -1,0 +1,43 @@
+name: Daily K-News to Chinese
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "collect = 새 기사 수집, reprocess = 기존 기사 학습자료 다시 생성"
+        required: true
+        default: collect
+        type: choice
+        options: [collect, reprocess]
+  schedule:
+    - cron: "0 21 * * *"
+jobs:
+  collect-and-translate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Run collector or reprocessor
+        env:
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          DEEPL_API_KEY: ${{ secrets.DEEPL_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          APP_URL: ${{ secrets.APP_URL }}
+          NEWS_QUERIES: "경제,사회,국제"
+          ARTICLES_PER_QUERY: "1"
+          MAX_ARTICLE_CHARS: "12000"
+          MAX_SENTENCES: "60"
+        run: |
+          if [ "${{ github.event.inputs.mode }}" = "reprocess" ]; then
+            python reprocess.py
+          else
+            python collect.py
+          fi

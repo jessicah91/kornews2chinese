@@ -1,13 +1,10 @@
 from __future__ import annotations
-
 from pydantic import BaseModel, Field
-
 
 class SentencePair(BaseModel):
     korean: str
     chinese: str
     pinyin: str
-
 
 class VocabularyItem(BaseModel):
     word: str
@@ -16,20 +13,17 @@ class VocabularyItem(BaseModel):
     example_zh: str = ""
     example_ko: str = ""
 
-
 class GrammarItem(BaseModel):
     expression: str
     explanation_ko: str
     example_zh: str
     example_ko: str
 
-
 class QuizItem(BaseModel):
     question_ko: str
     choices: list[str] = Field(min_length=3, max_length=5)
     answer_index: int = Field(ge=0, le=4)
     explanation_ko: str
-
 
 class StudyArticle(BaseModel):
     title_ko: str
